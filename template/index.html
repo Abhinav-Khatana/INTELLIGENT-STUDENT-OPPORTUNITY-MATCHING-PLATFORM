@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CareerLink — Placement &amp; Internship Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0f1f47;
+  --navy-2:#16294f;
+  --ink:#16223f;
+  --ink-soft:#64748b;
+  --paper:#f6f9fd;
+  --surface:#ffffff;
+  --line:#e3ebf5;
+  --sky:#1ba7e0;
+  --sky-deep:#0f87ba;
+  --sky-soft:#e8f6fd;
+  --amber:#f9c23c;
+  --green:#12a06a;
+  --green-soft:#e4f7ef;
+  --rose:#ef4a5e;
+  --violet:#7c6cf5;
+  --shadow:0 1px 2px rgba(15,31,71,.05),0 12px 28px rgba(15,31,71,.07);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:400 15px/1.55 "Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;letter-spacing:-.02em;font-weight:800}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px;border-radius:8px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ============ LOGIN ============ */
+.auth{min-height:100vh;display:grid;place-items:center;padding:32px 20px;
+  background:
+    radial-gradient(60% 55% at 8% 12%,rgba(27,167,224,.28),transparent 60%),
+    radial-gradient(55% 50% at 92% 88%,rgba(124,108,245,.20),transparent 62%),
+    radial-gradient(50% 45% at 88% 8%,rgba(249,194,60,.18),transparent 60%),
+    var(--paper);
+}
+.logincard{width:100%;max-width:430px;background:var(--surface);border:1px solid var(--line);
+  border-radius:22px;padding:38px 36px 32px;box-shadow:0 20px 60px rgba(15,31,71,.12);text-align:center}
+.crest{width:74px;height:74px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(from 210deg,var(--sky),var(--violet),var(--amber),var(--sky));padding:3px}
+.crest i{width:100%;height:100%;border-radius:50%;background:var(--surface);display:grid;place-items:center;
+  font-style:normal;font-weight:800;font-size:21px;letter-spacing:.02em;color:var(--sky-deep)}
+.logincard h1{font-size:32px}
+.logincard .sub{color:var(--ink-soft);font-size:14.5px;margin:7px 0 26px}
+.roletabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;background:var(--paper);
+  border:1px solid var(--line);border-radius:14px;margin-bottom:24px}
+.roletabs button{padding:10px 6px;border-radius:10px;font-weight:600;font-size:14px;color:var(--ink-soft);transition:.16s}
+.roletabs button[aria-selected="true"]{background:var(--sky);color:#fff;box-shadow:0 4px 12px rgba(27,167,224,.35)}
+.field{display:block;text-align:left;margin-bottom:16px}
+.field .lab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.field .lab span{font-size:13.5px;font-weight:700}
+.field .lab a{font-size:13px;color:var(--sky-deep);text-decoration:none;font-weight:600}
+.input{width:100%;padding:13px 15px;border-radius:12px;border:1.5px solid var(--line);
+  background:var(--paper);transition:.15s}
+.input:focus{outline:none;border-color:var(--sky);background:var(--surface);box-shadow:0 0 0 4px rgba(27,167,224,.14)}
+.input:disabled{background:var(--sky-soft);color:var(--sky-deep);font-weight:600;border-color:transparent;cursor:default}
+.btn{width:100%;padding:14px;border-radius:12px;font-weight:700;color:#fff;background:var(--sky);
+  box-shadow:0 6px 18px rgba(27,167,224,.3);transition:.14s}
+.btn:hover{background:var(--sky-deep)}
+.btn:active{transform:translateY(1px)}
+.hint{margin-top:18px;padding:12px 14px;border-radius:12px;background:var(--sky-soft);
+  font-size:13px;color:var(--ink-soft);text-align:left}
+.hint b{color:var(--ink)}
+.err{margin-top:12px;font-size:13.5px;color:var(--rose);font-weight:600;display:none}
+
+/* ============ APP SHELL ============ */
+.app{display:none;min-height:100vh;grid-template-columns:266px 1fr;grid-template-rows:68px 1fr}
+.app.on{display:grid}
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 24px;
+  background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.topbar .mark{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;
+  font-size:15px;color:#fff;background:linear-gradient(140deg,var(--sky),var(--violet))}
+.topbar .rule{width:1px;height:26px;background:var(--line)}
+.topbar h2{font-size:18px}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.iconbtn{width:38px;height:38px;border-radius:50%;background:var(--sky-soft);display:grid;place-items:center;
+  font-size:16px;position:relative}
+.iconbtn .dot{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--rose)}
+.me{width:38px;height:38px;border-radius:50%;background:var(--amber);color:var(--navy);
+  display:grid;place-items:center;font-weight:800}
+
+.side{background:var(--navy);color:#cbd8ef;padding:22px 14px 18px;display:flex;flex-direction:column;
+  position:sticky;top:68px;height:calc(100vh - 68px)}
+.menulabel{font-size:11px;font-weight:700;letter-spacing:.14em;color:#7b8cb3;padding:0 12px;margin-bottom:12px}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav button{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;font-size:14.5px;
+  font-weight:600;color:#c3d1ea;text-align:left;position:relative;transition:.15s}
+.nav button:hover{background:var(--navy-2);color:#fff}
+.nav button.active{background:var(--navy-2);color:var(--amber)}
+.nav button.active::before{content:"";position:absolute;left:-14px;top:9px;bottom:9px;width:4px;
+  border-radius:0 4px 4px 0;background:var(--amber)}
+.nav .ic{width:19px;text-align:center;font-size:15px}
+.side footer{margin-top:auto;border-top:1px solid rgba(255,255,255,.09);padding-top:14px;display:flex;flex-direction:column;gap:2px}
+.side footer button{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;
+  font-size:14px;font-weight:600;color:#c3d1ea}
+.side footer button:hover{background:var(--navy-2)}
+.side footer button.out{color:#ff7a89}
+
+.main{padding:26px 30px 60px;max-width:1220px}
+.pagehead{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:22px;
+  display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.pagehead h1{font-size:26px;color:var(--ink)}
+.pagehead p{margin:6px 0 0;color:var(--ink-soft);font-size:14.5px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--line);font-size:14px;font-weight:600;box-shadow:var(--shadow)}
+.chip.on{background:var(--sky-soft);border-color:transparent;color:var(--sky-deep)}
+.view{display:none}.view.on{display:block}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.stat b{display:block;font-size:30px;font-weight:800;line-height:1.15}
+.stat small{color:var(--ink-soft);font-size:13px;font-weight:500}
+.stat.accent{background:linear-gradient(140deg,var(--sky),#1264a8);color:#fff;border-color:transparent}
+.stat.accent small{color:rgba(255,255,255,.85)}
+
+.banner{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow)}
+.banner h3{font-size:19px}
+.banner p{margin:6px 0 0;color:var(--ink-soft);font-size:14.5px}
+.banner p b{color:var(--sky-deep)}
+
+.job{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+  box-shadow:var(--shadow);display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:14px}
+.job.locked{opacity:.7}
+.job h3{font-size:17px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.job .co{color:var(--ink-soft);font-size:14px;margin:4px 0 0}
+.badge{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:7px;background:var(--green-soft);color:var(--green)}
+.badge.warn{background:rgba(249,194,60,.2);color:#9a6a00}
+.tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.tag{font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:8px;background:var(--paper);
+  border:1px solid var(--line);color:var(--ink-soft)}
+.tag.skill{background:var(--sky-soft);border-color:transparent;color:var(--sky-deep)}
+.pkg{font-size:21px;font-weight:800;text-align:right;white-space:nowrap}
+.pkg small{display:block;font-size:12px;font-weight:500;color:var(--ink-soft)}
+.act{margin-top:10px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.apply{padding:10px 20px;border-radius:10px;background:var(--sky);color:#fff;font-weight:700;font-size:14px;
+  box-shadow:0 5px 14px rgba(27,167,224,.28)}
+.apply:hover{background:var(--sky-deep)}
+.apply[disabled]{background:var(--paper);color:var(--ink-soft);border:1px solid var(--line);
+  box-shadow:none;cursor:not-allowed}
+.why{font-size:12.5px;color:var(--rose);max-width:23ch;text-align:right;font-weight:500}
+
+.pill{font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;display:inline-block}
+.pill.applied{background:rgba(249,194,60,.2);color:#9a6a00}
+.pill.shortlisted{background:rgba(124,108,245,.14);color:var(--violet)}
+.pill.interview{background:var(--sky-soft);color:var(--sky-deep)}
+.pill.selected{background:var(--green-soft);color:var(--green)}
+.pill.rejected{background:rgba(239,74,94,.14);color:var(--rose)}
+
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th{text-align:left;font-size:12.5px;font-weight:700;color:var(--ink-soft);padding:0 12px 10px;border-bottom:1px solid var(--line)}
+td{padding:13px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.tablewrap{overflow-x:auto}
+.mini{padding:7px 14px;border-radius:9px;font-size:13px;font-weight:700;background:var(--paper);border:1px solid var(--line)}
+.mini.go{background:var(--sky);color:#fff;border-color:transparent}
+.mini.no{color:var(--rose)}
+
+.timeline{list-style:none;margin:14px 0 0;padding:0 0 0 20px;border-left:2px solid var(--line)}
+.timeline li{position:relative;padding:0 0 16px 16px;font-size:14px;color:var(--ink-soft)}
+.timeline li::before{content:"";position:absolute;left:-27px;top:5px;width:12px;height:12px;border-radius:50%;
+  background:var(--line);border:2px solid var(--surface)}
+.timeline li.done::before{background:var(--sky)}
+.timeline li.done{color:var(--ink);font-weight:600}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(150%);background:var(--navy);
+  color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;
+  box-shadow:0 12px 30px rgba(15,31,71,.3);transition:transform .25s;z-index:60}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.empty{text-align:center;padding:44px 20px;color:var(--ink-soft)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+
+@media(max-width:980px){
+  .app.on{grid-template-columns:1fr;grid-template-rows:64px auto 1fr}
+  .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 14px}
+  .menulabel{display:none}
+  .nav{flex-direction:row;flex-wrap:wrap;flex:1}
+  .nav button.active::before{display:none}
+  .side footer{margin:0;border:0;padding:0;flex-direction:row}
+  .main{padding:20px 16px 50px}
+  .g4,.g3,.g2{grid-template-columns:repeat(2,1fr)}
+  .job{grid-template-columns:1fr}
+  .pkg{text-align:left}.act{align-items:flex-start}.why{text-align:left}
+}
+@media(max-width:560px){.g4,.g3,.g2{grid-template-columns:1fr}.logincard{padding:30px 22px 26px}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div class="auth" id="auth">
+  <div class="logincard">
+    <div class="crest"><i>CL</i></div>
+    <h1>CareerLink</h1>
+    <p class="sub">Sign in to your placement workspace</p>
+
+    <div class="roletabs" role="tablist">
+      <button role="tab" aria-selected="true" data-role="student">Student</button>
+      <button role="tab" aria-selected="false" data-role="admin">Placement Cell</button>
+    </div>
+
+    <div id="step1">
+      <label class="field">
+        <span class="lab"><span id="idLabel">Student ID / Roll No</span></span>
+        <input class="input" id="uid" autocomplete="username" placeholder="Enter your Student ID">
+      </label>
+      <button class="btn" id="continueBtn">Continue</button>
+      <p class="err" id="err1">Enter your ID to continue.</p>
+    </div>
+
+    <!-- returning user: password login -->
+    <div id="stepLogin" style="display:none">
+      <label class="field">
+        <span class="lab"><span>Signing in as</span><a href="#" class="changeId" onclick="return false">Change</a></span>
+        <input class="input" id="uidDisplay1" disabled>
+      </label>
+      <label class="field">
+        <span class="lab"><span>Password</span><a href="#" id="forgot" onclick="return false">Forgot Password?</a></span>
+        <input class="input" id="pwd" type="password" autocomplete="current-password" placeholder="••••••••">
+      </label>
+      <button class="btn" id="loginBtn">Login</button>
+      <p class="err" id="errLogin">That password doesn't match this ID.</p>
+    </div>
+
+    <!-- first-time user: create a password -->
+    <div id="stepCreate" style="display:none">
+      <div class="hint" style="margin:0 0 18px">No account found for this ID yet. Set a password to create one.</div>
+      <label class="field">
+        <span class="lab"><span>Signing in as</span><a href="#" class="changeId" onclick="return false">Change</a></span>
+        <input class="input" id="uidDisplay2" disabled>
+      </label>
+      <label class="field">
+        <span class="lab"><span>Create password</span></span>
+        <input class="input" id="pwdNew" type="password" autocomplete="new-password" placeholder="At least 4 characters">
+      </label>
+      <label class="field">
+        <span class="lab"><span>Confirm password</span></span>
+        <input class="input" id="pwdNew2" type="password" autocomplete="new-password" placeholder="Re-enter password">
+      </label>
+      <button class="btn" id="createBtn">Set password &amp; sign in</button>
+      <p class="err" id="errCreate">Check both passwords match and are at least 4 characters.</p>
+    </div>
+
+    <!-- forgot password: reset -->
+    <div id="stepReset" style="display:none">
+      <label class="field">
+        <span class="lab"><span>Resetting password for</span><a href="#" class="changeId" onclick="return false">Change</a></span>
+        <input class="input" id="uidDisplay3" disabled>
+      </label>
+      <label class="field">
+        <span class="lab"><span>New password</span></span>
+        <input class="input" id="pwdReset" type="password" autocomplete="new-password" placeholder="At least 4 characters">
+      </label>
+      <label class="field">
+        <span class="lab"><span>Confirm new password</span></span>
+        <input class="input" id="pwdReset2" type="password" autocomplete="new-password" placeholder="Re-enter password">
+      </label>
+      <button class="btn" id="resetBtn">Save password &amp; sign in</button>
+      <p class="err" id="errReset">Check both passwords match and are at least 4 characters.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="mark" id="mark">CL</div>
+    <div class="rule"></div>
+    <h2 id="portalName">Student Portal</h2>
+    <div class="right">
+      <button class="iconbtn" id="bell" title="Notifications">🔔<span class="dot"></span></button>
+      <div class="me" id="avatar">S</div>
+    </div>
+  </header>
+
+  <aside class="side">
+    <div class="menulabel">MAIN MENU</div>
+    <nav class="nav" id="nav"></nav>
+    <footer>
+      <button id="chpwd"><span class="ic">🔑</span> Change Password</button>
+      <button class="out" id="signout"><span class="ic">⇥</span> Logout</button>
+    </footer>
+  </aside>
+
+  <main class="main" id="main"></main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- data ---------------- */
+const me={name:"Shanu Khatana",roll:"240221096",branch:"CSE",cgpa:8.4,backlogs:0,currentOffer:0,
+  skills:["Java","SQL","React","DBMS"],resume:"Shanu_Khatana_v3.pdf"};
+
+const opportunities=[
+ {id:1,role:"Software Engineer — Backend",company:"Zeta Systems",type:"Full-time",location:"Bengaluru",
+  cgpa:7.5,branches:["CSE","IT"],maxBacklogs:0,package:14,openings:12,deadline:"28 Sep",skills:["Java","SQL","REST"],applicants:64},
+ {id:2,role:"Data Analyst Intern",company:"Nimbus Analytics",type:"Internship",location:"Remote",
+  cgpa:7.0,branches:["CSE","IT","ECE"],maxBacklogs:1,package:6,openings:8,deadline:"25 Sep",skills:["Python","SQL","Excel"],applicants:38},
+ {id:3,role:"Platform Engineer",company:"Arclight Cloud",type:"Full-time",location:"Hyderabad",
+  cgpa:8.0,branches:["CSE","IT"],maxBacklogs:0,package:22,openings:4,deadline:"2 Oct",skills:["Linux","Docker","Go"],applicants:27},
+ {id:4,role:"Embedded Firmware Engineer",company:"Volt Instruments",type:"Full-time",location:"Pune",
+  cgpa:7.2,branches:["ECE","EEE"],maxBacklogs:2,package:9,openings:6,deadline:"30 Sep",skills:["C","RTOS"],applicants:19},
+ {id:5,role:"Frontend Developer",company:"Paperfold",type:"Full-time",location:"Noida",
+  cgpa:7.0,branches:["CSE","IT"],maxBacklogs:1,package:8,openings:10,deadline:"26 Sep",skills:["React","CSS","JS"],applicants:52}
+];
+
+let applications=[
+ {id:101,oppId:5,student:"Shanu Khatana",roll:"240221096",branch:"CSE",cgpa:8.4,status:"Interview",date:"14 Sep"},
+ {id:102,oppId:2,student:"Shanu Khatana",roll:"240221096",branch:"CSE",cgpa:8.4,status:"Shortlisted",date:"16 Sep"}
+];
+const otherApps=[
+ {id:201,oppId:1,student:"Abhinav Khatana",roll:"240211097",branch:"CSE",cgpa:8.1,status:"Applied",date:"18 Sep"},
+ {id:202,oppId:1,student:"Jyotsna Chamoli",roll:"240211628",branch:"IT",cgpa:7.9,status:"Applied",date:"18 Sep"},
+ {id:203,oppId:3,student:"Ritika Rawat",roll:"240211455",branch:"CSE",cgpa:9.1,status:"Shortlisted",date:"17 Sep"},
+ {id:204,oppId:4,student:"Manav Negi",roll:"240210988",branch:"ECE",cgpa:7.4,status:"Applied",date:"19 Sep"},
+ {id:205,oppId:5,student:"Priya Bisht",roll:"240211220",branch:"IT",cgpa:6.8,status:"Rejected",date:"15 Sep"}
+];
+
+let role="student";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const opp=id=>opportunities.find(o=>o.id===id);
+const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),2400)};
+
+function check(o){
+  if(me.cgpa<o.cgpa) return `Needs ${o.cgpa} CGPA — you have ${me.cgpa}`;
+  if(!o.branches.includes(me.branch)) return `Open to ${o.branches.join(", ")} only`;
+  if(me.backlogs>o.maxBacklogs) return `Max ${o.maxBacklogs} backlog allowed`;
+  if(me.currentOffer&&o.package<=me.currentOffer) return `Below your ₹${me.currentOffer} LPA offer`;
+  return null;
+}
+const applied=id=>applications.some(a=>a.oppId===id);
+
+/* ---------------- accounts (stored in this browser only) ---------------- */
+function loadAccounts(){
+  try{ return JSON.parse(localStorage.getItem("careerlink_accounts")||"{}"); }
+  catch(e){ return {}; }
+}
+function saveAccounts(obj){
+  try{ localStorage.setItem("careerlink_accounts", JSON.stringify(obj)); }
+  catch(e){ /* storage unavailable — session still works, just won't persist */ }
+}
+const acctKey=(r,id)=>r+":"+id.trim().toLowerCase();
+
+/* ---------------- login ---------------- */
+let pendingId="";
+const steps=["step1","stepLogin","stepCreate","stepReset"];
+function showStep(name){
+  steps.forEach(s=>$("#"+s).style.display = s===name?"block":"none");
+  ["#err1","#errLogin","#errCreate","#errReset"].forEach(s=>$(s).style.display="none");
+}
+
+document.querySelectorAll(".roletabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".roletabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
+  role=b.dataset.role;
+  const st=role==="student";
+  $("#idLabel").textContent=st?"Student ID / Roll No":"Staff ID / Email";
+  $("#uid").placeholder=st?"Enter your Student ID":"placement@college.edu";
+  $("#uid").value="";
+  showStep("step1");
+});
+
+$("#continueBtn").onclick=()=>{
+  const u=$("#uid").value.trim();
+  if(!u){$("#err1").style.display="block";return}
+  pendingId=u;
+  const accounts=loadAccounts();
+  const exists = !!accounts[acctKey(role,u)];
+  $("#uidDisplay1").value=u;$("#uidDisplay2").value=u;$("#uidDisplay3").value=u;
+  if(exists){ showStep("stepLogin"); $("#pwd").value=""; $("#pwd").focus(); }
+  else{ showStep("stepCreate"); $("#pwdNew").value="";$("#pwdNew2").value=""; $("#pwdNew").focus(); }
+};
+$("#uid").addEventListener("keydown",e=>{if(e.key==="Enter")$("#continueBtn").click()});
+document.querySelectorAll(".changeId").forEach(a=>a.onclick=()=>showStep("step1"));
+
+$("#loginBtn").onclick=()=>{
+  const accounts=loadAccounts(), key=acctKey(role,pendingId), p=$("#pwd").value;
+  if(!p || accounts[key]!==p){ $("#errLogin").style.display="block"; return; }
+  $("#errLogin").style.display="none"; enter();
+};
+$("#pwd").addEventListener("keydown",e=>{if(e.key==="Enter")$("#loginBtn").click()});
+
+$("#forgot").onclick=()=>{ $("#pwdReset").value="";$("#pwdReset2").value=""; showStep("stepReset"); $("#pwdReset").focus(); };
+
+$("#createBtn").onclick=()=>{
+  const a=$("#pwdNew").value, b=$("#pwdNew2").value;
+  if(a.length<4 || a!==b){ $("#errCreate").style.display="block"; return; }
+  const accounts=loadAccounts(); accounts[acctKey(role,pendingId)]=a; saveAccounts(accounts);
+  $("#errCreate").style.display="none"; toast("Password set — you're in"); enter();
+};
+[$("#pwdNew"),$("#pwdNew2")].forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")$("#createBtn").click()}));
+
+$("#resetBtn").onclick=()=>{
+  const a=$("#pwdReset").value, b=$("#pwdReset2").value;
+  if(a.length<4 || a!==b){ $("#errReset").style.display="block"; return; }
+  const accounts=loadAccounts(); accounts[acctKey(role,pendingId)]=a; saveAccounts(accounts);
+  $("#errReset").style.display="none"; toast("Password updated — you're in"); enter();
+};
+[$("#pwdReset"),$("#pwdReset2")].forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")$("#resetBtn").click()}));
+
+$("#signout").onclick=()=>{
+  $("#app").classList.remove("on");$("#auth").style.display="grid";
+  $("#uid").value=""; showStep("step1");
+};
+$("#chpwd").onclick=()=>{ $("#app").classList.remove("on");$("#auth").style.display="grid"; $("#uid").value=pendingId; $("#continueBtn").click(); $("#forgot").click(); };
+$("#bell").onclick=()=>toast(role==="student"?"2 deadlines closing this week":"3 new applications today");
+
+function enter(){
+  $("#auth").style.display="none";
+  $("#app").classList.add("on");$("#app").dataset.role=role;
+  const items=role==="student"
+    ?[["opps","Opportunities","🎯"],["mine","My Applications","📄"],["profile","My Profile","👤"]]
+    :[["overview","Overview","📊"],["post","Post Opportunity","➕"],["apps","Applications","🗂"],["companies","Companies","🏢"]];
+  $("#nav").innerHTML=items.map(([k,l,i],n)=>`<button data-view="${k}" class="${n?"":"active"}"><span class="ic">${i}</span>${l}</button>`).join("");
+  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    $("#nav").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));
+    render(b.dataset.view);
+  });
+  $("#portalName").textContent=role==="student"?"Student Portal":"Placement Cell Portal";
+  $("#avatar").textContent=role==="student"?"S":"P";
+  render(items[0][0]);window.scrollTo(0,0);
+}
+
+/* ---------------- views ---------------- */
+function render(v){
+  $("#main").innerHTML=({opps:studentOpps,mine:studentApps,profile:studentProfile,
+    overview:adminOverview,post:adminPost,apps:adminApps,companies:adminCompanies})[v]();
+  bind();window.scrollTo(0,0);
+}
+const head=(t,s,extra="")=>`<div class="pagehead"><div><h1>${t}</h1><p>${s}</p></div>${extra}</div>`;
+
+function studentOpps(){
+  const cards=opportunities.map(o=>{
+    const why=check(o),done=applied(o.id);
+    return `<article class="job ${why?"locked":""}">
+      <div>
+        <h3>${esc(o.role)} ${why?'<span class="badge warn">Not eligible</span>':'<span class="badge">Eligible</span>'}</h3>
+        <p class="co">${esc(o.company)} · ${o.location} · ${o.type}</p>
+        <div class="tags">
+          <span class="tag">CGPA ≥ ${o.cgpa}</span>
+          <span class="tag">${o.branches.join(" / ")}</span>
+          <span class="tag">Backlogs ≤ ${o.maxBacklogs}</span>
+          <span class="tag">Apply by ${o.deadline}</span>
+          ${o.skills.map(s=>`<span class="tag skill">${s}</span>`).join("")}
+        </div>
+      </div>
+      <div>
+        <div class="pkg">₹${o.package} LPA<small>${o.openings} openings</small></div>
+        <div class="act">
+          <button class="apply" data-apply="${o.id}" ${why||done?"disabled":""}>${done?"Applied":why?"Locked":"Apply now"}</button>
+          ${why?`<span class="why">${esc(why)}</span>`:""}
+        </div>
+      </div>
+    </article>`}).join("");
+  return head("Opportunities","Roles open to you right now, checked against your profile.",
+    `<span class="chip on">Semester 5 · 2026 batch</span>`)+`
+    <div class="banner"><h3>Package rule</h3>
+      <p>You can apply only to roles paying more than your current offer${me.currentOffer?` of <b>₹${me.currentOffer} LPA</b>`:" — <b>you have no offer yet</b>, so everything is open"}.</p></div>
+    ${cards}`;
+}
+
+function studentApps(){
+  if(!applications.length) return head("My Applications","Track where each application stands.")+
+    `<div class="panel empty"><b>Nothing here yet</b>Apply to a role and it will show up here.</div>`;
+  const stages=["Applied","Shortlisted","Interview","Selected"];
+  return head("My Applications","Track where each application stands.")+applications.map(a=>{
+    const o=opp(a.oppId),i=stages.indexOf(a.status);
+    return `<div class="panel" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start">
+        <div><h3 style="font-size:17px">${esc(o.role)}</h3>
+        <p style="margin:4px 0 0;color:var(--ink-soft);font-size:14px">${esc(o.company)} · applied ${a.date} · ₹${o.package} LPA</p></div>
+        <span class="pill ${a.status.toLowerCase()}">${a.status}</span></div>
+      <ul class="timeline">${stages.map((s,k)=>`<li class="${k<=i&&a.status!=="Rejected"?"done":""}">${s}</li>`).join("")}</ul>
+    </div>`}).join("");
+}
+
+function studentProfile(){
+  return head("My Profile","What recruiters and the placement cell see.")+`
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="panel stat"><b>${me.cgpa}</b><small>CGPA</small></div>
+    <div class="panel stat"><b>${me.backlogs}</b><small>Active backlogs</small></div>
+    <div class="panel stat"><b>${applications.length}</b><small>Applications</small></div>
+    <div class="panel stat accent"><b>${me.currentOffer?"₹"+me.currentOffer+" LPA":"None"}</b><small>Current offer</small></div>
+  </div>
+  <div class="grid g2">
+    <div class="panel"><h3 style="font-size:16px;margin-bottom:12px">Details</h3>
+      <table><tbody>
+        <tr><td style="color:var(--ink-soft)">Name</td><td>${me.name}</td></tr>
+        <tr><td style="color:var(--ink-soft)">Roll number</td><td>${me.roll}</td></tr>
+        <tr><td style="color:var(--ink-soft)">Branch</td><td>${me.branch}</td></tr>
+        <tr><td style="color:var(--ink-soft)">Resume</td><td>${me.resume}</td></tr>
+      </tbody></table></div>
+    <div class="panel"><h3 style="font-size:16px;margin-bottom:12px">Skills</h3>
+      <div class="tags">${me.skills.map(s=>`<span class="tag skill">${s}</span>`).join("")}</div>
+      <p style="color:var(--ink-soft);font-size:14px;margin-top:18px">Skills are matched against each role's requirements to rank you during shortlisting.</p></div>
+  </div>`;
+}
+
+/* ---------- admin ---------- */
+const allApps=()=>[...applications,...otherApps];
+
+function adminOverview(){
+  const a=allApps();
+  const recent=a.slice(0,5).map(x=>`<tr>
+    <td><b>${esc(x.student)}</b><br><small style="color:var(--ink-soft)">${x.roll} · ${x.branch}</small></td>
+    <td>${esc(opp(x.oppId).role)}<br><small style="color:var(--ink-soft)">${esc(opp(x.oppId).company)}</small></td>
+    <td>${x.date}</td><td><span class="pill ${x.status.toLowerCase()}">${x.status}</span></td></tr>`).join("");
+  return head("Overview","Placement activity for the 2026 batch.")+`
+  <div class="grid g4" style="margin-bottom:18px">
+    <div class="panel stat"><b>${opportunities.length}</b><small>Active opportunities</small></div>
+    <div class="panel stat"><b>${a.length}</b><small>Total applications</small></div>
+    <div class="panel stat"><b>${a.filter(x=>x.status==="Shortlisted"||x.status==="Interview").length}</b><small>In process</small></div>
+    <div class="panel stat accent"><b>₹22 LPA</b><small>Highest package</small></div>
+  </div>
+  <div class="panel"><h3 style="font-size:16px;margin-bottom:12px">Recent applications</h3>
+  <div class="tablewrap"><table><thead><tr><th>Student</th><th>Role</th><th>Applied</th><th>Status</th></tr></thead>
+  <tbody>${recent}</tbody></table></div></div>`;
+}
+
+function adminPost(){
+  return head("Post Opportunity","Publish a role — eligible students see it instantly.")+`
+  <div class="panel" style="max-width:780px">
+    <div class="grid g2">
+      <label class="field"><span class="lab"><span>Company</span></span><input class="input" id="f_co" placeholder="Zeta Systems"></label>
+      <label class="field"><span class="lab"><span>Role</span></span><input class="input" id="f_role" placeholder="Software Engineer"></label>
+      <label class="field"><span class="lab"><span>Package (₹ LPA)</span></span><input class="input" id="f_pkg" type="number" placeholder="14"></label>
+      <label class="field"><span class="lab"><span>Openings</span></span><input class="input" id="f_open" type="number" placeholder="10"></label>
+      <label class="field"><span class="lab"><span>Minimum CGPA</span></span><input class="input" id="f_cgpa" type="number" step="0.1" placeholder="7.5"></label>
+      <label class="field"><span class="lab"><span>Maximum backlogs</span></span><input class="input" id="f_bl" type="number" placeholder="0"></label>
+      <label class="field"><span class="lab"><span>Eligible branches</span></span><input class="input" id="f_br" placeholder="CSE, IT"></label>
+      <label class="field"><span class="lab"><span>Application deadline</span></span><input class="input" id="f_dl" placeholder="30 Sep"></label>
+    </div>
+    <label class="field"><span class="lab"><span>Required skills</span></span><input class="input" id="f_sk" placeholder="Java, SQL, REST"></label>
+    <button class="btn" id="publish" style="width:auto;padding:13px 28px">Publish opportunity</button>
+  </div>`;
+}
+
+function adminApps(){
+  const rows=allApps().map(x=>{const o=opp(x.oppId);
+    return `<tr>
+      <td><b>${esc(x.student)}</b><br><small style="color:var(--ink-soft)">${x.roll} · ${x.branch} · ${x.cgpa} CGPA</small></td>
+      <td>${esc(o.role)}<br><small style="color:var(--ink-soft)">${esc(o.company)}</small></td>
+      <td>₹${o.package} LPA</td>
+      <td><span class="pill ${x.status.toLowerCase()}">${x.status}</span></td>
+      <td style="white-space:nowrap">
+        <button class="mini go" data-set="${x.id}" data-status="Shortlisted">Shortlist</button>
+        <button class="mini no" data-set="${x.id}" data-status="Rejected">Reject</button></td></tr>`}).join("");
+  return head("Applications","Shortlist or reject — students see the update on their tracker.")+`
+    <div class="panel"><div class="tablewrap"><table>
+    <thead><tr><th>Student</th><th>Role</th><th>Package</th><th>Status</th><th>Decision</th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div>`;
+}
+
+function adminCompanies(){
+  const map={};opportunities.forEach(o=>{(map[o.company]=map[o.company]||[]).push(o)});
+  return head("Companies","Recruiters currently hiring on campus.")+`<div class="grid g2">`+
+    Object.entries(map).map(([c,list])=>`<div class="panel">
+      <h3 style="font-size:16.5px">${esc(c)}</h3>
+      <p style="color:var(--ink-soft);font-size:14px;margin:5px 0 12px">${list.length} open role${list.length>1?"s":""} · ${list.reduce((s,o)=>s+o.applicants,0)} applicants</p>
+      <div class="tags">${list.map(o=>`<span class="tag">${esc(o.role)} — ₹${o.package} LPA</span>`).join("")}</div></div>`).join("")+`</div>`;
+}
+
+/* ---------------- actions ---------------- */
+function bind(){
+  document.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>{
+    const o=opp(+b.dataset.apply);
+    applications.unshift({id:Date.now(),oppId:o.id,student:me.name,roll:me.roll,branch:me.branch,
+      cgpa:me.cgpa,status:"Applied",date:"21 Sep"});
+    toast(`Applied to ${o.role} at ${o.company}`);render("opps");
+  });
+  document.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{
+    const id=+b.dataset.set,s=b.dataset.status;
+    [applications,otherApps].forEach(l=>{const a=l.find(x=>x.id===id);if(a)a.status=s});
+    toast(`Marked ${s.toLowerCase()}`);render("apps");
+  });
+  const pub=$("#publish");
+  if(pub) pub.onclick=()=>{
+    const v=id=>$(id).value.trim();
+    if(!v("#f_co")||!v("#f_role")||!v("#f_pkg")) return toast("Add company, role and package to publish");
+    opportunities.unshift({id:Date.now(),role:v("#f_role"),company:v("#f_co"),type:"Full-time",
+      location:"On campus",cgpa:+v("#f_cgpa")||0,branches:(v("#f_br")||"CSE").split(",").map(s=>s.trim()),
+      maxBacklogs:+v("#f_bl")||0,package:+v("#f_pkg"),openings:+v("#f_open")||1,
+      deadline:v("#f_dl")||"TBD",skills:v("#f_sk")?v("#f_sk").split(",").map(s=>s.trim()):[],applicants:0});
+    toast("Opportunity published");
+    document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x.dataset.view==="companies"));
+    render("companies");
+  };
+}
+</script>
+</body>
+</html>
