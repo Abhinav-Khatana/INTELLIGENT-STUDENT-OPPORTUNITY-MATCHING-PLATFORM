@@ -17,6 +17,7 @@ from extensions import db
 from auth import auth_bp
 from routes_student import student_bp
 from routes_admin import admin_bp
+from routes_os import os_bp
 
 
 def create_app():
@@ -36,6 +37,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(student_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(os_bp)
 
     @app.get("/api/health")
     def health():

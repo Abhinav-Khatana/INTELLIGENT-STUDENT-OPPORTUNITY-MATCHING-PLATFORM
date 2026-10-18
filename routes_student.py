@@ -189,15 +189,27 @@ def apply():
     if issue:
         return jsonify({"error": issue}), 400
 
-    if Application.query.filter_by(student_id=student.id, opportunity_id=opp.id).first():
-        return jsonify({"error": "You have already applied to this opportunity"}), 409
+    from os_concepts.mutex import apply_mutex
+    try:
+        with apply_mutex.acquire(timeout=5.0):
+            # Critical section — check + insert must be atomic
+            if Application.query.filter_by(
+                student_id=student.id, opportunity_id=opp.id
+            ).first():
+                return jsonify({
+                    "error": "You have already applied to this opportunity"
+                }), 409
 
-    app_row = Application(
-        student_id=student.id, opportunity_id=opp.id, status="Applied",
-        application_date=datetime.utcnow(), resume_version=student.resume_path,
-    )
-    db.session.add(app_row)
-    db.session.commit()
+            app_row = Application(
+                student_id=student.id, opportunity_id=opp.id, status="Applied",
+                application_date=datetime.utcnow(),
+                resume_version=student.resume_path,
+            )
+            db.session.add(app_row)
+            db.session.commit()
+    except TimeoutError:
+        return jsonify({"error": "Server busy, please retry"}), 503
+
     return jsonify(application_public(app_row)), 201
 
 
