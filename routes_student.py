@@ -128,13 +128,33 @@ def upload_resume():
         return jsonify({"error": "Choose a file to upload"}), 400
     if not f.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Only PDF files are allowed"}), 400
+
+    pdf_bytes = f.read()
+    f.stream.seek(0)
+
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     fname = f"{g.auth['id']}_{uuid.uuid4().hex[:8]}_{secure_filename(f.filename)}"
     f.save(os.path.join(UPLOAD_DIR, fname))
+
     s = Student.query.get(g.auth["id"])
     s.resume_path = fname
+
+    # Extract skills + CGPA (never fatal)
+    extracted = {"skills": [], "cgpa": None}
+    try:
+        from resume_parser import extract_profile
+        from models import Skill
+        catalogue = [sk.name for sk in Skill.query.all()]
+        result = extract_profile(pdf_bytes, catalogue)
+        extracted = {
+            "skills": result.get("skills", []),
+            "cgpa":   result.get("cgpa"),
+        }
+    except Exception:
+        pass
+
     db.session.commit()
-    return jsonify({"ok": True, "resume_path": fname})
+    return jsonify({"ok": True, "resume_path": fname, "extracted": extracted})
 
 
 @student_bp.get("/applications/mine")
