@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Flask / SQLAlchemy
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment (never commit real credentials)
+.env
+
+# Uploads (keep the folder, ignore the files)
+uploads/resumes/*
+!uploads/resumes/.gitkeep
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
