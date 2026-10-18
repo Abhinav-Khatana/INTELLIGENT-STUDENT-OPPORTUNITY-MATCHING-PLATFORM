@@ -10,7 +10,6 @@ student_bp = Blueprint("student", __name__, url_prefix="/api")
 
 
 def eligibility_issue(student, opp):
-    """Returns None if eligible, or a human-readable reason."""
     if student.cgpa < opp.eligibility_cgpa:
         return f"Needs {opp.eligibility_cgpa} CGPA — you have {student.cgpa}"
     branches = [b.strip() for b in (opp.eligible_branch or "").split(",") if b.strip()]
@@ -59,6 +58,17 @@ def application_public(a):
         "student": {"id": a.student.id, "name": a.student.name,
                     "roll_no": a.student.roll_no, "branch": a.student.branch,
                     "cgpa": a.student.cgpa},
+        "interviews": [{
+            "id": i.id, "round": i.interview_round,
+            "date": i.interview_date.strftime("%d %b %Y, %H:%M") if i.interview_date else None,
+            "mode": i.mode, "result": i.interview_result, "remarks": i.remarks,
+        } for i in a.interviews],
+        "offer": ({
+            "id": a.offer.id,
+            "package_offered": a.offer.package_offered,
+            "status": a.offer.offer_status,
+            "joining_date": a.offer.joining_date.strftime("%d %b %Y") if a.offer.joining_date else None,
+        } if a.offer else None),
     }
 
 
@@ -136,3 +146,19 @@ def apply():
     db.session.add(app_row)
     db.session.commit()
     return jsonify(application_public(app_row)), 201
+
+
+@student_bp.post("/applications/<int:app_id>/withdraw")
+@require_auth("student")
+def withdraw_application(app_id):
+    """Withdraw an application before it moves past Shortlisted."""
+    app_row = Application.query.filter_by(id=app_id, student_id=g.auth["id"]).first()
+    if not app_row:
+        return jsonify({"error": "Application not found"}), 404
+    if app_row.status not in ("Applied", "Shortlisted"):
+        return jsonify({
+            "error": f"Can't withdraw after status is '{app_row.status}'"
+        }), 400
+    app_row.status = "Withdrawn"
+    db.session.commit()
+    return jsonify({"ok": True, "status": "Withdrawn"})
