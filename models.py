@@ -11,7 +11,22 @@ it, so this holds the placement cell's login accounts.
 """
 from datetime import datetime
 from extensions import db
+class UniversityRecord(db.Model):
+    """The university's authoritative student list.
 
+    Pre-loaded by the placement cell. A student can only register if
+    BOTH their roll number AND email match a row here. Once used, the
+    record is flagged so the same roll number can't be reused.
+    """
+    __tablename__ = "university_record"
+    id         = db.Column(db.Integer, primary_key=True)
+    roll_no    = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    email      = db.Column(db.String(120), nullable=False, index=True)
+    name       = db.Column(db.String(120), nullable=False)
+    branch     = db.Column(db.String(20))
+    batch      = db.Column(db.String(10))
+    is_registered         = db.Column(db.Boolean, default=False)
+    registered_student_id = db.Column(db.Integer, db.ForeignKey("student.id"))
 
 class Student(db.Model):
     __tablename__ = "student"
@@ -146,3 +161,13 @@ class Offer(db.Model):
     package_offered = db.Column(db.Float)
     offer_status = db.Column(db.String(20))                      # Accepted / Rejected / Withdrawn
     joining_date = db.Column(db.Date)
+class OTPVerification(db.Model):
+    __tablename__ = "otp_verification"
+    id         = db.Column(db.Integer, primary_key=True)
+    email      = db.Column(db.String(120), nullable=False, index=True)
+    otp_hash   = db.Column(db.String(255), nullable=False)
+    purpose    = db.Column(db.String(20), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used       = db.Column(db.Boolean, default=False)
+    attempts   = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
