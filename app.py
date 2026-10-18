@@ -53,5 +53,21 @@ def create_app():
 
 app = create_app()
 
+# ---- Notification consumer worker (producer/consumer pattern) ----
+from os_concepts.notification_queue import notification_queue
+
+def _notification_worker(item):
+    from extensions import db
+    from models import Notification
+    with app.app_context():
+        try:
+            db.session.add(Notification(**item))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+notification_queue.start(_notification_worker)
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

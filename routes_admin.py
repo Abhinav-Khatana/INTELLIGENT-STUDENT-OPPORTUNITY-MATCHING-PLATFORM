@@ -50,15 +50,16 @@ def update_application(app_id):
     old = app_row.status
     app_row.status = status
     if old != status:
+        from os_concepts.notification_queue import notification_queue
         kind = "success" if status in ("Shortlisted", "Interview", "Selected") \
                else "warning" if status == "Rejected" else "info"
-        db.session.add(Notification(
-            student_id=app_row.student_id,
-            title=f"Application update: {status}",
-            message=f"{app_row.opportunity.role} at "
-                    f"{app_row.opportunity.company.name} is now '{status}'.",
-            kind=kind, link="mine",
-        ))
+        notification_queue.enqueue({
+            "student_id": app_row.student_id,
+            "title": f"Application update: {status}",
+            "message": f"{app_row.opportunity.role} at "
+                       f"{app_row.opportunity.company.name} is now '{status}'.",
+            "kind": kind, "link": "mine",
+        })
     db.session.commit()
     return jsonify(application_public(app_row))
 
@@ -95,19 +96,19 @@ def create_opportunity():
         status="Active",
         posted_date=datetime.utcnow(),
     )
-    db.session.add(opp); db.session.flush()
-
+    from os_concepts.notification_queue import notification_queue
     queued = 0
     for s in Student.query.all():
         if eligibility_issue(s, opp) is None:
-            db.session.add(Notification(
-                student_id=s.id,
-                title=f"New role: {opp.role}",
-                message=f"{company.name} is hiring — ₹{opp.package_offered} LPA. "
-                        f"Apply by {opp.application_deadline or 'TBD'}.",
-                kind="success", link="opps",
-            ))
-            queued += 1
+            ok = notification_queue.enqueue({
+                "student_id": s.id,
+                "title": f"New role: {opp.role}",
+                "message": f"{company.name} is hiring — ₹{opp.package_offered} LPA. "
+                           f"Apply by {opp.application_deadline or 'TBD'}.",
+                "kind": "success", "link": "opps",
+            })
+            if ok:
+                queued += 1
 
     db.session.commit()
     result = opportunity_public(opp)
