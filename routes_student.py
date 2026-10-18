@@ -1,11 +1,11 @@
-"""Student routes: opportunities, applications, profile, resume upload."""
+"""Student routes: opportunities, applications, profile, resume, notifications."""
 import os, uuid
 from datetime import datetime
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.utils import secure_filename
 
 from extensions import db
-from models import Student, Opportunity, Application
+from models import Student, Opportunity, Application, Notification
 from auth import require_auth
 
 student_bp = Blueprint("student", __name__, url_prefix="/api")
@@ -32,6 +32,7 @@ def opportunity_public(opp, student=None):
         "id": opp.id, "role": opp.role, "company": opp.company.name,
         "company_id": opp.company_id,
         "company_description": opp.company_description,
+        "company_website": opp.company.website,
         "job_description": opp.job_description,
         "eligibility_cgpa": opp.eligibility_cgpa,
         "eligible_branch": opp.eligible_branch,
@@ -108,6 +109,7 @@ def my_profile():
 @student_bp.patch("/students/me")
 @require_auth("student")
 def update_profile():
+    from models import Skill, StudentSkill
     body = request.get_json(force=True, silent=True) or {}
     s = Student.query.get(g.auth["id"])
     for f in ("name", "branch", "phone"):
@@ -116,6 +118,19 @@ def update_profile():
         if f in body:
             try: setattr(s, f, float(body[f] or 0))
             except (TypeError, ValueError): pass
+    if "skills" in body:
+        StudentSkill.query.filter_by(student_id=s.id).delete()
+        seen = set()
+        for name in body["skills"]:
+            name = str(name).strip()
+            if not name or name.lower() in seen: continue
+            seen.add(name.lower())
+            sk = Skill.query.filter_by(name=name).first()
+            if not sk:
+                sk = Skill(name=name, category="General")
+                db.session.add(sk); db.session.flush()
+            db.session.add(StudentSkill(student_id=s.id, skill_id=sk.id,
+                                        proficiency_level="Intermediate"))
     db.session.commit()
     return jsonify({"ok": True})
 
@@ -139,19 +154,15 @@ def upload_resume():
     s = Student.query.get(g.auth["id"])
     s.resume_path = fname
 
-    # Extract skills + CGPA (never fatal)
     extracted = {"skills": [], "cgpa": None}
     try:
         from resume_parser import extract_profile
         from models import Skill
         catalogue = [sk.name for sk in Skill.query.all()]
         result = extract_profile(pdf_bytes, catalogue)
-        extracted = {
-            "skills": result.get("skills", []),
-            "cgpa":   result.get("cgpa"),
-        }
+        extracted = {"skills": result.get("skills", []), "cgpa": result.get("cgpa")}
     except Exception:
-        pass
+        current_app.logger.exception("Resume parse failed")
 
     db.session.commit()
     return jsonify({"ok": True, "resume_path": fname, "extracted": extracted})
@@ -203,3 +214,39 @@ def withdraw_application(app_id):
     app_row.status = "Withdrawn"
     db.session.commit()
     return jsonify({"ok": True, "status": "Withdrawn"})
+
+
+# ---------- notifications ----------
+@student_bp.get("/notifications")
+@require_auth("student")
+def list_notifications():
+    notes = (Notification.query.filter_by(student_id=g.auth["id"])
+             .order_by(Notification.created_at.desc()).limit(30).all())
+    unread = sum(1 for n in notes if not n.is_read)
+    return jsonify({
+        "unread": unread,
+        "items": [{
+            "id": n.id, "title": n.title, "message": n.message,
+            "kind": n.kind, "link": n.link, "is_read": n.is_read,
+            "created_at": n.created_at.strftime("%d %b, %H:%M"),
+        } for n in notes],
+    })
+
+
+@student_bp.post("/notifications/<int:nid>/read")
+@require_auth("student")
+def mark_read(nid):
+    n = Notification.query.filter_by(id=nid, student_id=g.auth["id"]).first()
+    if not n: return jsonify({"error": "Not found"}), 404
+    n.is_read = True
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@student_bp.post("/notifications/read-all")
+@require_auth("student")
+def mark_all_read():
+    Notification.query.filter_by(student_id=g.auth["id"], is_read=False)\
+                      .update({"is_read": True})
+    db.session.commit()
+    return jsonify({"ok": True})
