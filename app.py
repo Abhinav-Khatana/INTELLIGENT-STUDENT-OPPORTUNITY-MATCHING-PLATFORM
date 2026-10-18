@@ -1,73 +1,64 @@
-"""
-CareerLink / PIMS backend — entry point.
-
-Run locally:
-    pip install -r requirements.txt
-    python app.py
-
-Serves the API at http://localhost:5000/api/...
-See README.md for the full endpoint list and demo accounts.
-"""
+"""CareerLink / PIMS backend entry point."""
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
-from flask import Flask
+from flask import Flask, render_template, send_from_directory
 from flask_cors import CORS
 
 from extensions import db
 from auth import auth_bp
 from routes_student import student_bp
 from routes_admin import admin_bp
-from routes_os import os_bp
+
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads", "resumes")
 
 
 def create_app():
     app = Flask(__name__)
-
-    # Default: a local SQLite file, zero setup needed.
-    # To use MySQL instead (matching the MySQL 8.4 reference in the proposal),
-    # set DATABASE_URL, e.g.:
-    #   mysql+pymysql://user:password@localhost/pims
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///pims.db")
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+        "DATABASE_URL") or f"sqlite:///{os.path.join(BASE_DIR, 'pims.db')}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me-in-production")
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+    app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB uploads
 
     db.init_app(app)
-    CORS(app)  # lets the frontend HTML file (opened from anywhere) call this API
+    CORS(app)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(student_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(os_bp)
+
+    @app.get("/")
+    def home():
+        return render_template("index.html")
 
     @app.get("/api/health")
     def health():
         return {"status": "ok"}
+
+    @app.get("/uploads/resumes/<path:filename>")
+    def resume_file(filename):
+        return send_from_directory(UPLOAD_DIR, filename)
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     with app.app_context():
         db.create_all()
         from seed import seed_if_empty
         seed_if_empty()
 
+    # ---- OS CONCEPT: start Producer–Consumer worker threads ----
+    from os_concepts import init_notification_queue
+    from models import Notification
+    q = init_notification_queue(db, Notification, size=200, workers=2)
+    q.start(app)
+
     return app
 
 
 app = create_app()
-
-# ---- Notification consumer worker (producer/consumer pattern) ----
-from os_concepts.notification_queue import notification_queue
-
-def _notification_worker(item):
-    from extensions import db
-    from models import Notification
-    with app.app_context():
-        try:
-            db.session.add(Notification(**item))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-
-notification_queue.start(_notification_worker)
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

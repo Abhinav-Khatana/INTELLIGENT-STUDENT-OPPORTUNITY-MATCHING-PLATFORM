@@ -1,5 +1,5 @@
-"""Auth: email-OTP registration gated by UniversityRecord, password login,
-student password reset."""
+"""Auth: email-OTP registration (gated by UniversityRecord),
+password login, student password reset."""
 import secrets
 from datetime import datetime, timedelta
 from functools import wraps
@@ -101,8 +101,11 @@ def _check_otp(email, otp, purpose, consume=True):
     return True, None
 
 
+# ---------- check roll + email against university records ----------
 @auth_bp.post("/check-student")
 def check_student():
+    """Called by the frontend before sending the OTP. Verifies the
+    (roll_no, email) pair against the university's authoritative list."""
     body  = request.get_json(force=True, silent=True) or {}
     roll  = (body.get("roll_no") or "").strip().upper()
     email = (body.get("email") or "").strip().lower()
@@ -127,10 +130,15 @@ def check_student():
         return jsonify({"valid": False,
                         "error": "An account already exists for this email."}), 409
 
-    return jsonify({"valid": True, "name": rec.name,
-                    "branch": rec.branch, "batch": rec.batch})
+    return jsonify({
+        "valid": True,
+        "name": rec.name,
+        "branch": rec.branch,
+        "batch": rec.batch,
+    })
 
 
+# ---------- send OTP ----------
 @auth_bp.post("/send-otp")
 def send_otp_route():
     body    = request.get_json(force=True, silent=True) or {}
@@ -143,6 +151,7 @@ def send_otp_route():
     if not email.endswith(ALLOWED_DOMAIN):
         return jsonify({"error": f"Only {ALLOWED_DOMAIN} email addresses are allowed"}), 400
 
+    # --- HARD GATE for registration: roll + email must match ---
     if purpose == "register":
         if not roll_no:
             return jsonify({"error": "Roll number is required"}), 400
@@ -153,7 +162,9 @@ def send_otp_route():
                          "has on file. Please check your details and try again.",
             }), 403
         if rec.is_registered:
-            return jsonify({"error": "An account has already been created for this roll number."}), 409
+            return jsonify({
+                "error": "An account has already been created for this roll number.",
+            }), 409
         if Student.query.filter_by(email=email).first():
             return jsonify({"error": "An account already exists for this email."}), 409
 
@@ -162,7 +173,8 @@ def send_otp_route():
             return jsonify({"error": "No student account found for this email."}), 404
 
     ok, err = _issue_otp(email, purpose)
-    if not ok: return jsonify({"error": err}), 429
+    if not ok:
+        return jsonify({"error": err}), 429
     return jsonify({"ok": True, "message": f"Verification code sent to {email}"})
 
 
@@ -177,6 +189,7 @@ def verify_otp_route():
     return jsonify({"ok": True})
 
 
+# ---------- register ----------
 @auth_bp.post("/register")
 def register():
     body     = request.get_json(force=True, silent=True) or {}
@@ -193,6 +206,7 @@ def register():
     if len(password) < 8:
         return jsonify({"error": "Password must be at least 8 characters"}), 400
 
+    # --- HARD GATE: roll + email must match the university's record ---
     rec = UniversityRecord.query.filter_by(roll_no=roll_no, email=email).first()
     if not rec:
         return jsonify({
@@ -243,6 +257,7 @@ def register():
                     "role": "student", "user": _public("student", student)}), 201
 
 
+# ---------- login ----------
 @auth_bp.post("/login")
 def login():
     body     = request.get_json(force=True, silent=True) or {}
@@ -263,6 +278,7 @@ def login():
                     "user": _public(role, user)})
 
 
+# ---------- forgot / reset ----------
 @auth_bp.post("/forgot-password")
 def forgot_password():
     body  = request.get_json(force=True, silent=True) or {}

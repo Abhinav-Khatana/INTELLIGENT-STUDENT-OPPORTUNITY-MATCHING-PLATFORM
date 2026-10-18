@@ -8,16 +8,16 @@ from models import (Student, AdminUser, Company, Opportunity, Notification,
 ADMIN_EMAIL    = "placement@geu.ac.in"
 ADMIN_PASSWORD = "GEU@Placement2026"
 
-# University's authoritative student list.
-# Registration succeeds ONLY if roll_no + email match one row here.
-# Replace with real student data before the final demo.
+# --- The university's authorised student list ---
+# Registration succeeds ONLY if roll_no + email match one of these rows.
 UNIVERSITY_RECORDS = [
-    ("240211097", "abhinavkhatana1100@gmail.com",   "Abhinav Khatana",  "CSE", "2026"),
-    ("240221096", "shanukhatana062@gmail.com",      "Shanu Khatana",    "CSE", "2026"),
-    ("240211628", "jyotsnachamoli3@gmail.com",      "Jyotsna Chamoli",  "IT",  "2026"),
-    ("240211455", "ritikarawat@gmail.com",          "Ritika Rawat",     "CSE", "2026"),
-    ("240210988", "manavnegi@gmail.com",            "Manav Negi",       "ECE", "2026"),
-    ("240211220", "priyabisht@gmail.com",           "Priya Bisht",      "IT",  "2026"),
+    # roll_no,      email,                            name,               branch, batch
+    ("240211097",  "abhinavkhatana1100@gmail.com",   "Abhinav Khatana",  "CSE",  "2026"),
+    ("240221096",  "shanukhatana6@gmail.com",      "Shanu Khatana",    "CSE",  "2026"),
+    ("240211628",  "jyotsnachamoli3@gmail.com",      "Jyotsna Chamoli",  "IT",   "2026"),
+    ("240211455",  "ritikarawat@gmail.com",          "Ritika Rawat",     "CSE",  "2026"),
+    ("240210988",  "manavnegi@gmail.com",            "Manav Negi",       "ECE",  "2026"),
+    ("240211220",  "priyabisht@gmail.com",           "Priya Bisht",      "IT",   "2026"),
 ]
 
 SKILL_CATALOGUE = [
@@ -45,32 +45,35 @@ DEMO_OPPORTUNITIES = [
          required_skills="Java, SQL, REST APIs",
          company_desc="Cloud-native product company building developer tooling.",
          jd="Build and scale backend services in Java and Spring Boot. "
-            "Work with our data team on event-driven pipelines."),
+            "Work with our data team on event-driven pipelines. Ship to production weekly."),
     dict(company="Nimbus Analytics", role="Data Analyst Intern",
          eligibility_cgpa=7.0, eligible_branch="CSE, IT, ECE", max_backlogs=1,
          package_offered=6, number_of_openings=8, application_deadline="25 Sep 2026",
          required_skills="Python, SQL, Excel",
          company_desc="Analytics consultancy serving retail and BFSI clients.",
          jd="Clean, analyse and visualise client data in Python and SQL. "
-            "Prepare weekly dashboards."),
+            "Prepare weekly dashboards and summaries. 6-month paid internship."),
     dict(company="Arclight Cloud", role="Platform Engineer",
          eligibility_cgpa=8.0, eligible_branch="CSE, IT", max_backlogs=0,
          package_offered=22, number_of_openings=4, application_deadline="2 Oct 2026",
          required_skills="Linux, Docker, Go",
          company_desc="Infrastructure-as-a-service platform for high-scale apps.",
-         jd="Own the Kubernetes platform that serves 200+ enterprise customers."),
+         jd="Own the Kubernetes platform that serves 200+ enterprise customers. "
+            "Write Go services, improve observability, reduce MTTR."),
     dict(company="Volt Instruments", role="Embedded Firmware Engineer",
          eligibility_cgpa=7.2, eligible_branch="ECE, EEE", max_backlogs=2,
          package_offered=9, number_of_openings=6, application_deadline="30 Sep 2026",
          required_skills="C, RTOS",
          company_desc="Industrial IoT and instrumentation hardware manufacturer.",
-         jd="Write bare-metal C firmware for industrial sensor gateways."),
+         jd="Write bare-metal C firmware for industrial sensor gateways. "
+            "Port RTOS drivers. Work with hardware engineers on board bring-up."),
     dict(company="Paperfold", role="Frontend Developer",
          eligibility_cgpa=7.0, eligible_branch="CSE, IT", max_backlogs=1,
          package_offered=8, number_of_openings=10, application_deadline="26 Sep 2026",
          required_skills="React, CSS, JavaScript",
          company_desc="Design-led product studio working with D2C brands.",
-         jd="Build pixel-perfect interfaces in React."),
+         jd="Build pixel-perfect interfaces in React. Own end-to-end feature "
+            "delivery with our design team. Ship weekly."),
 ]
 
 

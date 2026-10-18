@@ -1,14 +1,16 @@
-"""Admin routes: overview, applications, opportunity posting, companies, students."""
+"""Admin routes: stats, applications, opportunity posting, companies,
+plus OS-concept demo endpoints (scheduling policies + queue stats)."""
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from extensions import db
 from models import Company, Opportunity, Application, Student, Notification
 from auth import require_auth
 from routes_student import opportunity_public, application_public, eligibility_issue
+from os_concepts import InterviewScheduler, get_queue   # <-- OS CONCEPT
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
-VALID_STATUSES = {"Applied", "Shortlisted", "Interview", "Selected", "Rejected", "Withdrawn"}
+VALID_STATUSES = {"Applied", "Shortlisted", "Interview", "Selected", "Rejected"}
 
 
 @admin_bp.get("/overview")
@@ -49,17 +51,25 @@ def update_application(app_id):
 
     old = app_row.status
     app_row.status = status
+
     if old != status:
-        from os_concepts.notification_queue import notification_queue
         kind = "success" if status in ("Shortlisted", "Interview", "Selected") \
                else "warning" if status == "Rejected" else "info"
-        notification_queue.enqueue({
+        # OS CONCEPT — Producer side of Producer–Consumer:
+        # push a payload onto the queue instead of writing directly.
+        q = get_queue()
+        payload = {
             "student_id": app_row.student_id,
             "title": f"Application update: {status}",
             "message": f"{app_row.opportunity.role} at "
                        f"{app_row.opportunity.company.name} is now '{status}'.",
             "kind": kind, "link": "mine",
-        })
+        }
+        if q:
+            q.produce(payload)
+        else:
+            db.session.add(Notification(**payload))
+
     db.session.commit()
     return jsonify(application_public(app_row))
 
@@ -77,7 +87,8 @@ def create_opportunity():
     if not company:
         company = Company(name=body["company_name"],
                           description=body.get("company_description", ""))
-        db.session.add(company); db.session.flush()
+        db.session.add(company)
+        db.session.flush()
     elif body.get("company_description"):
         company.description = body["company_description"]
 
@@ -96,18 +107,26 @@ def create_opportunity():
         status="Active",
         posted_date=datetime.utcnow(),
     )
-    from os_concepts.notification_queue import notification_queue
+    db.session.add(opp)
+    db.session.flush()  # so opp.id is available
+
+    # OS CONCEPT — Producer side of Producer–Consumer.
+    # Enqueue one payload per eligible student; workers write them.
+    q = get_queue()
     queued = 0
     for s in Student.query.all():
         if eligibility_issue(s, opp) is None:
-            ok = notification_queue.enqueue({
+            payload = {
                 "student_id": s.id,
                 "title": f"New role: {opp.role}",
                 "message": f"{company.name} is hiring — ₹{opp.package_offered} LPA. "
                            f"Apply by {opp.application_deadline or 'TBD'}.",
                 "kind": "success", "link": "opps",
-            })
-            if ok:
+            }
+            if q and q.produce(payload):
+                queued += 1
+            elif not q:
+                db.session.add(Notification(**payload))
                 queued += 1
 
     db.session.commit()
@@ -146,3 +165,39 @@ def all_students():
             "resume_path": s.resume_path,
         })
     return jsonify(out)
+
+
+# ============================================================
+# OS CONCEPT endpoints — schedulers + queue stats
+# ============================================================
+
+@admin_bp.get("/schedule")
+@require_auth("admin")
+def schedule():
+    """Run the CPU-scheduling dispatcher with the chosen policy.
+
+    Query params:
+      policy = fcfs | priority | rr   (default fcfs)
+    """
+    policy = request.args.get("policy", "fcfs").lower()
+    apps = Application.query.all()
+    try:
+        ordered = InterviewScheduler.schedule(apps, policy)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    return jsonify({
+        "policy": policy,
+        "policies": InterviewScheduler.list_policies(),
+        "queue": [application_public(a) for a in ordered],
+    })
+
+
+@admin_bp.get("/queue-stats")
+@require_auth("admin")
+def queue_stats():
+    """Live stats for the Producer–Consumer queue."""
+    q = get_queue()
+    if not q:
+        return jsonify({"error": "queue not initialized"}), 500
+    return jsonify(q.stats)

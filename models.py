@@ -4,6 +4,13 @@ from extensions import db
 
 
 class UniversityRecord(db.Model):
+    """The university's authoritative student list.
+
+    Pre-loaded by the placement cell. A student can only register if
+    BOTH their roll number AND email match a row here. Once a record
+    is used to create an account, `is_registered` is flipped to True
+    and it can't be reused.
+    """
     __tablename__ = "university_record"
     id         = db.Column(db.Integer, primary_key=True)
     roll_no    = db.Column(db.String(20), unique=True, nullable=False, index=True)
@@ -11,7 +18,7 @@ class UniversityRecord(db.Model):
     name       = db.Column(db.String(120), nullable=False)
     branch     = db.Column(db.String(20))
     batch      = db.Column(db.String(10))
-    is_registered         = db.Column(db.Boolean, default=False)
+    is_registered      = db.Column(db.Boolean, default=False)
     registered_student_id = db.Column(db.Integer, db.ForeignKey("student.id"))
 
 

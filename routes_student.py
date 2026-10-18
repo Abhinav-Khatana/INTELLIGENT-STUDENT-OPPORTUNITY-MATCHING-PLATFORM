@@ -1,12 +1,14 @@
-"""Student routes: opportunities, applications, profile, resume, notifications."""
+"""Student routes: opportunities, applications, profile, resume (with
+extraction), skills, notifications."""
 import os, uuid
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.utils import secure_filename
 
 from extensions import db
-from models import Student, Opportunity, Application, Notification
+from models import Student, Opportunity, Application, Notification, Skill, StudentSkill
 from auth import require_auth
+from os_concepts import application_mutex   # OS CONCEPT
 
 student_bp = Blueprint("student", __name__, url_prefix="/api")
 
@@ -33,6 +35,7 @@ def opportunity_public(opp, student=None):
         "company_id": opp.company_id,
         "company_description": opp.company_description,
         "company_website": opp.company.website,
+        "company_contact": opp.company.contact_person,
         "job_description": opp.job_description,
         "eligibility_cgpa": opp.eligibility_cgpa,
         "eligible_branch": opp.eligible_branch,
@@ -64,17 +67,6 @@ def application_public(a):
         "student": {"id": a.student.id, "name": a.student.name,
                     "roll_no": a.student.roll_no, "branch": a.student.branch,
                     "cgpa": a.student.cgpa},
-        "interviews": [{
-            "id": i.id, "round": i.interview_round,
-            "date": i.interview_date.strftime("%d %b %Y, %H:%M") if i.interview_date else None,
-            "mode": i.mode, "result": i.interview_result, "remarks": i.remarks,
-        } for i in a.interviews],
-        "offer": ({
-            "id": a.offer.id,
-            "package_offered": a.offer.package_offered,
-            "status": a.offer.offer_status,
-            "joining_date": a.offer.joining_date.strftime("%d %b %Y") if a.offer.joining_date else None,
-        } if a.offer else None),
     }
 
 
@@ -89,10 +81,10 @@ def list_opportunities():
 
 @student_bp.get("/skills")
 def skills_catalogue():
-    from models import Skill
     return jsonify([s.name for s in Skill.query.order_by(Skill.name).all()])
 
 
+# ---------- profile ----------
 @student_bp.get("/students/me")
 @require_auth("student")
 def my_profile():
@@ -109,7 +101,6 @@ def my_profile():
 @student_bp.patch("/students/me")
 @require_auth("student")
 def update_profile():
-    from models import Skill, StudentSkill
     body = request.get_json(force=True, silent=True) or {}
     s = Student.query.get(g.auth["id"])
     for f in ("name", "branch", "phone"):
@@ -144,6 +135,7 @@ def upload_resume():
     if not f.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Only PDF files are allowed"}), 400
 
+    # read the bytes once — we'll save them and parse them
     pdf_bytes = f.read()
     f.stream.seek(0)
 
@@ -154,20 +146,29 @@ def upload_resume():
     s = Student.query.get(g.auth["id"])
     s.resume_path = fname
 
-    extracted = {"skills": [], "cgpa": None}
+    # --- extraction (never fatal — upload should succeed regardless) ---
+    extracted = {"skills": [], "cgpa": None, "chars_extracted": 0}
     try:
         from resume_parser import extract_profile
-        from models import Skill
         catalogue = [sk.name for sk in Skill.query.all()]
         result = extract_profile(pdf_bytes, catalogue)
-        extracted = {"skills": result.get("skills", []), "cgpa": result.get("cgpa")}
-    except Exception:
+        extracted = {
+            "skills": result.get("skills", []),
+            "cgpa":   result.get("cgpa"),
+            "chars_extracted": result.get("chars_extracted", 0),
+        }
+    except Exception as e:
         current_app.logger.exception("Resume parse failed")
 
     db.session.commit()
-    return jsonify({"ok": True, "resume_path": fname, "extracted": extracted})
+    return jsonify({
+        "ok": True,
+        "resume_path": fname,
+        "extracted": extracted,
+    })
 
 
+# ---------- applications ----------
 @student_bp.get("/applications/mine")
 @require_auth("student")
 def my_applications():
@@ -179,53 +180,30 @@ def my_applications():
 @student_bp.post("/applications")
 @require_auth("student")
 def apply():
+    """OS CONCEPT — Mutual Exclusion. Critical section wraps eligibility
+    check → existence check → insert."""
     body = request.get_json(force=True, silent=True) or {}
     opp  = Opportunity.query.get(body.get("opportunity_id"))
     if not opp or opp.status != "Active":
         return jsonify({"error": "This opportunity is not open for applications"}), 404
 
     student = Student.query.get(g.auth["id"])
-    issue = eligibility_issue(student, opp)
-    if issue:
-        return jsonify({"error": issue}), 400
-
-    from os_concepts.mutex import apply_mutex
     try:
-        with apply_mutex.acquire(timeout=5.0):
-            # Critical section — check + insert must be atomic
-            if Application.query.filter_by(
-                student_id=student.id, opportunity_id=opp.id
-            ).first():
-                return jsonify({
-                    "error": "You have already applied to this opportunity"
-                }), 409
-
+        with application_mutex.acquire(student.id, timeout=5.0):
+            issue = eligibility_issue(student, opp)
+            if issue: return jsonify({"error": issue}), 400
+            if Application.query.filter_by(student_id=student.id,
+                                           opportunity_id=opp.id).first():
+                return jsonify({"error": "You have already applied to this opportunity"}), 409
             app_row = Application(
                 student_id=student.id, opportunity_id=opp.id, status="Applied",
-                application_date=datetime.utcnow(),
-                resume_version=student.resume_path,
+                application_date=datetime.utcnow(), resume_version=student.resume_path,
             )
             db.session.add(app_row)
             db.session.commit()
-    except TimeoutError:
-        return jsonify({"error": "Server busy, please retry"}), 503
-
-    return jsonify(application_public(app_row)), 201
-
-
-@student_bp.post("/applications/<int:app_id>/withdraw")
-@require_auth("student")
-def withdraw_application(app_id):
-    app_row = Application.query.filter_by(id=app_id, student_id=g.auth["id"]).first()
-    if not app_row:
-        return jsonify({"error": "Application not found"}), 404
-    if app_row.status not in ("Applied", "Shortlisted"):
-        return jsonify({
-            "error": f"Can't withdraw after status is '{app_row.status}'"
-        }), 400
-    app_row.status = "Withdrawn"
-    db.session.commit()
-    return jsonify({"ok": True, "status": "Withdrawn"})
+            return jsonify(application_public(app_row)), 201
+    except TimeoutError as e:
+        return jsonify({"error": str(e)}), 409
 
 
 # ---------- notifications ----------

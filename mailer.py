@@ -1,5 +1,14 @@
-"""OTP email delivery via Gmail SMTP."""
-import os, smtplib, ssl
+"""OTP email delivery via Gmail SMTP.
+
+Reads config from environment variables (see .env):
+    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, MAIL_DEV_MODE
+
+When MAIL_DEV_MODE=true, the email is printed to the console instead of
+being sent — useful for offline development. In production set it to false.
+"""
+import os
+import smtplib
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
@@ -13,6 +22,7 @@ DEV_MODE  = os.environ.get("MAIL_DEV_MODE", "true").lower() == "true"
 
 
 def _send(to, subject, html):
+    # Dev mode or missing credentials: print to console
     if DEV_MODE or not SMTP_USER or not SMTP_PASS:
         print(f"\n========== [MAIL-DEV] ==========\n"
               f"To:      {to}\nSubject: {subject}\n{html}\n"
@@ -25,6 +35,7 @@ def _send(to, subject, html):
     msg["To"]      = to
     msg.attach(MIMEText(html, "html"))
 
+    # Port 465 → implicit SSL. Port 587 → STARTTLS. Anything else: plain (no TLS).
     if SMTP_PORT == 465:
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=context, timeout=20) as s:
