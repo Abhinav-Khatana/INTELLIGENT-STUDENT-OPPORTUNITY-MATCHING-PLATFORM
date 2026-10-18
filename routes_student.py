@@ -1,12 +1,17 @@
-"""Student routes: opportunities, applications, profile."""
+"""Student routes: opportunities, applications, profile, resume upload."""
+import os, uuid
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g
+from werkzeug.utils import secure_filename
 
 from extensions import db
 from models import Student, Opportunity, Application
 from auth import require_auth
 
 student_bp = Blueprint("student", __name__, url_prefix="/api")
+
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads", "resumes")
 
 
 def eligibility_issue(student, opp):
@@ -115,6 +120,23 @@ def update_profile():
     return jsonify({"ok": True})
 
 
+@student_bp.post("/students/me/resume")
+@require_auth("student")
+def upload_resume():
+    f = request.files.get("resume")
+    if not f or not f.filename:
+        return jsonify({"error": "Choose a file to upload"}), 400
+    if not f.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are allowed"}), 400
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    fname = f"{g.auth['id']}_{uuid.uuid4().hex[:8]}_{secure_filename(f.filename)}"
+    f.save(os.path.join(UPLOAD_DIR, fname))
+    s = Student.query.get(g.auth["id"])
+    s.resume_path = fname
+    db.session.commit()
+    return jsonify({"ok": True, "resume_path": fname})
+
+
 @student_bp.get("/applications/mine")
 @require_auth("student")
 def my_applications():
@@ -151,7 +173,6 @@ def apply():
 @student_bp.post("/applications/<int:app_id>/withdraw")
 @require_auth("student")
 def withdraw_application(app_id):
-    """Withdraw an application before it moves past Shortlisted."""
     app_row = Application.query.filter_by(id=app_id, student_id=g.auth["id"]).first()
     if not app_row:
         return jsonify({"error": "Application not found"}), 404
