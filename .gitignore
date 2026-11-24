@@ -1,0 +1,8 @@
+# secrets & local data — never commit these
+.env
+pims.db
+instance/
+uploads/resumes/*
+!uploads/resumes/.gitkeep
+__pycache__/
+*.pyc

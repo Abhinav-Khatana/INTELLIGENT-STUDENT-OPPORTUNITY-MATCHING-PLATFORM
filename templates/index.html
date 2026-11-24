@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f7fb">
+<meta name="description" content="CareerLink — the placement portal for students and the placement cell.">
+<title>CareerLink — Placement Portal</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f1f47'/%3E%3Ctext x='32' y='41' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='white'%3ECL%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ============================ AUTH ============================ -->
+<div id="auth" class="auth" style="display:none">
+  <div class="logincard">
+    <div class="crest"><i>CL</i></div>
+    <h1>CareerLink</h1>
+    <p class="sub">Placement Portal</p>
+
+    <div class="roletabs" role="tablist" aria-label="Sign in as">
+      <button data-role="student" aria-selected="true" role="tab">Student</button>
+      <button data-role="admin"   aria-selected="false" role="tab">Placement Cell</button>
+    </div>
+
+    <!-- ---------- student login ---------- -->
+    <section id="stLogin" class="step on">
+      <label class="field"><span class="lab"><span>Email</span></span>
+        <input class="input" id="stEmail" type="email" placeholder="you@gmail.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false"></label>
+      <label class="field"><span class="lab"><span>Password</span></span>
+        <input class="input" id="stPass" type="password" placeholder="Password" autocomplete="current-password"></label>
+
+      <div id="stLoginErr" class="err" role="alert"></div>
+      <button class="btn" id="stLoginBtn">Sign in</button>
+
+      <div class="authlinks">
+        <a href="#" id="stRegisterLink">Create an account</a>
+        <a href="#" id="stForgotLink" class="soft">Forgot password?</a>
+      </div>
+    </section>
+
+    <!-- ---------- student register ---------- -->
+    <section id="stRegister" class="step">
+      <div class="regprogress" aria-hidden="true">
+        <span class="dot on"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+
+      <div class="regstep on" id="rgStep1">
+        <label class="field"><span class="lab"><span>Full name</span></span>
+          <input class="input" id="rgName" placeholder="As on your college ID" autocomplete="name"></label>
+        <div class="field-row">
+          <label class="field"><span class="lab"><span>Roll number</span></span>
+            <input class="input" id="rgRoll" placeholder="21CSE001" autocapitalize="characters" spellcheck="false"></label>
+          <label class="field"><span class="lab"><span>Branch</span></span>
+            <select class="input" id="rgBranch">
+              <option value="">Select…</option>
+              <option>CSE</option><option>IT</option><option>ECE</option>
+              <option>EEE</option><option>ME</option><option>CE</option>
+            </select></label>
+        </div>
+        <label class="field"><span class="lab"><span>College email (Gmail)</span></span>
+          <input class="input" id="rgEmail" type="email" placeholder="you@gmail.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false"></label>
+        <div class="field-row">
+          <label class="field"><span class="lab"><span>Password</span></span>
+            <input class="input" id="rgPass" type="password" placeholder="8+ characters" autocomplete="new-password"></label>
+          <label class="field"><span class="lab"><span>Confirm</span></span>
+            <input class="input" id="rgPass2" type="password" placeholder="Repeat" autocomplete="new-password"></label>
+        </div>
+        <button class="btn" id="rgSendOtp">Send verification code</button>
+        <a href="#" id="stBackLogin" class="backlink">← Back to sign in</a>
+      </div>
+
+      <div class="regstep" id="rgStep2">
+        <p class="sub echo">Code sent to <b id="rgEmailEcho"></b></p>
+        <label class="field"><span class="lab"><span>6-digit code</span></span>
+          <input class="input otp" id="rgOtp" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="••••••"></label>
+        <button class="btn" id="rgVerify">Verify code</button>
+        <a href="#" id="rgBackTo1" class="backlink">← Change details</a>
+      </div>
+
+      <div class="regstep" id="rgStep3">
+        <div class="field-row">
+          <label class="field"><span class="lab"><span>CGPA</span></span>
+            <input class="input" id="rgCgpa" type="number" step="0.01" min="0" max="10" inputmode="decimal" value="0"></label>
+          <label class="field"><span class="lab"><span>Backlogs</span></span>
+            <input class="input" id="rgBacklogs" type="number" min="0" inputmode="numeric" value="0"></label>
+        </div>
+        <label class="field"><span class="lab"><span>Phone</span></span>
+          <input class="input" id="rgPhone" type="tel" placeholder="+91…" autocomplete="tel"></label>
+        <div class="field">
+          <span class="lab"><span>Skills · <span id="rgSkillCount">0 selected</span></span></span>
+          <div class="chip-picker" id="rgSkills"></div>
+        </div>
+        <button class="btn" id="rgFinish">Create account</button>
+      </div>
+      <div id="rgErr" class="err" role="alert"></div>
+    </section>
+
+    <!-- ---------- forgot password ---------- -->
+    <section id="stForgot" class="step">
+      <div id="fpStep1">
+        <label class="field"><span class="lab"><span>College email</span></span>
+          <input class="input" id="fpEmail" type="email" placeholder="you@gmail.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false"></label>
+        <button class="btn" id="fpSendOtp">Send reset code</button>
+        <a href="#" id="fpBack" class="backlink">← Back to sign in</a>
+      </div>
+      <div id="fpStep2" style="display:none">
+        <p class="sub echo">Code sent to <b id="fpEmailEcho"></b></p>
+        <label class="field"><span class="lab"><span>6-digit code</span></span>
+          <input class="input otp" id="fpOtp" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="••••••"></label>
+        <div class="field-row">
+          <label class="field"><span class="lab"><span>New password</span></span>
+            <input class="input" id="fpPass" type="password" autocomplete="new-password"></label>
+          <label class="field"><span class="lab"><span>Confirm</span></span>
+            <input class="input" id="fpPass2" type="password" autocomplete="new-password"></label>
+        </div>
+        <button class="btn" id="fpFinish">Update password</button>
+      </div>
+      <div id="fpErr" class="err" role="alert"></div>
+    </section>
+
+    <!-- ---------- admin login ---------- -->
+    <section id="adLogin" class="step">
+      <label class="field"><span class="lab"><span>Email</span></span>
+        <input class="input" id="adEmail" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></label>
+      <label class="field"><span class="lab"><span>Password</span></span>
+        <input class="input" id="adPass" type="password" autocomplete="current-password"></label>
+      <div id="adLoginErr" class="err" role="alert"></div>
+      <button class="btn" id="adLoginBtn">Sign in</button>
+    </section>
+  </div>
+</div>
+
+<!-- ============================ APP ============================ -->
+<div id="app" class="app">
+
+  <header class="topbar">
+    <div class="mark">CL</div>
+    <div class="rule"></div>
+    <h2 id="portalName">Student Portal</h2>
+    <div class="right">
+      <div class="me" id="avatar" aria-hidden="true">S</div>
+    </div>
+  </header>
+
+  <aside class="side">
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <footer>
+      <button id="chpwd">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+        Change password
+      </button>
+      <button id="signout" class="out">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+        Sign out
+      </button>
+    </footer>
+  </aside>
+
+  <main class="main" id="main"></main>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
